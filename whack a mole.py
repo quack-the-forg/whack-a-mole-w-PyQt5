@@ -1,14 +1,46 @@
 import sys
 import random
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QGridLayout, QHBoxLayout, QInputDialog, QLCDNumber, QMessageBox
-from PyQt5.QtCore import QTimer, QTime, Qt
+from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QGridLayout, QHBoxLayout, 
+                             QLCDNumber, QMessageBox, QDialog, QFormLayout, QLineEdit, QDialogButtonBox)
+from PyQt5.QtCore import QTimer, Qt
+
+class InputDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Game Settings")
+        self.layout = QFormLayout()
+
+        # Input fields for duration, rows, and columns
+        self.duration_input = QLineEdit(self)
+        self.duration_input.setPlaceholderText("Enter duration (15-60 seconds)")
+        self.layout.addRow("Game Duration:", self.duration_input)
+
+        self.rows_input = QLineEdit(self)
+        self.rows_input.setPlaceholderText("Enter number of rows (1-10)")
+        self.layout.addRow("Number of Rows:", self.rows_input)
+
+        self.cols_input = QLineEdit(self)
+        self.cols_input.setPlaceholderText("Enter number of columns (1-10)")
+        self.layout.addRow("Number of Columns:", self.cols_input)
+
+        # OK and Cancel buttons
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        self.layout.addWidget(self.buttons)
+
+        self.setLayout(self.layout)
+
+    def get_values(self):
+        return self.duration_input.text(), self.rows_input.text(), self.cols_input.text()
 
 class WhackAMoleGame(QWidget):
-    def __init__(self, duration):
+    def __init__(self, duration, rows, cols):
         super().__init__()
 
         # Game settings
-        self.grid_size = 3  # 3x3 grid
+        self.grid_size = (rows, cols)  # User-defined grid size
         self.mole_buttons = []
         self.score = 0
         self.time_left = duration
@@ -46,8 +78,10 @@ class WhackAMoleGame(QWidget):
         # Grid layout for moles
         grid_layout = QGridLayout()
 
-        for i in range(self.grid_size):
-            for j in range(self.grid_size):
+        # Set up the grid dynamically based on user input
+        rows, cols = self.grid_size
+        for i in range(rows):
+            for j in range(cols):
                 button = QPushButton(self)
                 button.setFixedSize(100, 100)
                 button.setText("")  # Initially no mole
@@ -104,13 +138,35 @@ class WhackAMoleGame(QWidget):
 def main():
     app = QApplication(sys.argv)
 
-    # Prompt the user to enter the game duration
-    duration, ok = QInputDialog.getInt(None, "Game Duration", "Enter game duration (15-60 seconds):", 30, 15, 60)
-    if not ok:
-        sys.exit()
+    while True:
+        # Create and display the input dialog
+        input_dialog = InputDialog()
+        if input_dialog.exec_() == QDialog.Accepted:
+            duration_text, rows_text, cols_text = input_dialog.get_values()
 
-    game = WhackAMoleGame(duration)
-    game.show()
+            # Convert input values to integers, handle validation
+            try:
+                duration = int(duration_text)
+                rows = int(rows_text)
+                cols = int(cols_text)
+
+                if 15 <= duration <= 60 and 3 <= rows <= 5 and 3 <= cols <= 5: # Grid has to be between 3x3 and 5x5
+                    game = WhackAMoleGame(duration, rows, cols)
+                    game.show()
+                    app.exec_()  # Run the game loop
+                    
+                    # After the game ends, ask the user if they want to play again
+                    replay = QMessageBox.question(None, "Play Again?", "Would you like to play another game?", 
+                                                  QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+                    if replay == QMessageBox.No:
+                        break  # Exit the loop and close the application
+                else:
+                    QMessageBox.warning(None, "Invalid Input", "Please enter valid values for duration (15-60), rows (1-10), and columns (1-10).")
+            except ValueError:
+                QMessageBox.warning(None, "Invalid Input", "Please enter valid integer values.")
+        else:
+            break  # Exit the loop if the dialog is cancelled
+
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
