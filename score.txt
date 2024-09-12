@@ -1,1 +1,6 @@
 # Scores will be displayed here
+Score: 17
+Score: 9
+Score: 2
+Score: 5
+Score: 2

@@ -2,7 +2,12 @@ import sys
 import random
 from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, QLabel, QGridLayout, QHBoxLayout, 
                              QLCDNumber, QMessageBox, QDialog, QFormLayout, QLineEdit, QDialogButtonBox)
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import QTimer, Qt
+
+MIN_ROWS, MAX_ROWS = 3, 5
+MIN_COLS, MAX_COLS = 3, 5
+MIN_TIME, MAX_TIME = 15, 60
 
 class InputDialog(QDialog):
     def __init__(self):
@@ -13,15 +18,14 @@ class InputDialog(QDialog):
 
         # Input fields for duration, rows, and columns
         self.duration_input = QLineEdit(self)
-        self.duration_input.setPlaceholderText("Enter duration (15-60 seconds)")
+        self.duration_input.setPlaceholderText(f"Enter duration ({MIN_TIME}-{MAX_TIME} seconds)")
         self.layout.addRow("Game Duration:", self.duration_input)
-
         self.rows_input = QLineEdit(self)
-        self.rows_input.setPlaceholderText("Enter number of rows (1-10)")
+        self.rows_input.setPlaceholderText(f"Enter number of rows ({MIN_ROWS}-{MAX_ROWS})")
         self.layout.addRow("Number of Rows:", self.rows_input)
 
         self.cols_input = QLineEdit(self)
-        self.cols_input.setPlaceholderText("Enter number of columns (1-10)")
+        self.cols_input.setPlaceholderText(f"Enter number of columns ({MIN_COLS}-{MAX_COLS})")
         self.layout.addRow("Number of Columns:", self.cols_input)
 
         # OK and Cancel buttons
@@ -38,6 +42,9 @@ class InputDialog(QDialog):
 class WhackAMoleGame(QWidget):
     def __init__(self, duration, rows, cols):
         super().__init__()
+        
+        # Load image of mole
+        self.mole_pixmap = QPixmap("mole.png")
 
         # Game settings
         self.grid_size = (rows, cols)  # User-defined grid size
@@ -99,20 +106,21 @@ class WhackAMoleGame(QWidget):
     def show_random_mole(self):
         # Clear all buttons
         for button in self.mole_buttons:
-            button.setText("")
+            button.setIcon(QIcon())  # Remove the icon (no mole)
             button.setEnabled(False)
 
         # Select a random button to be the mole
         mole = random.choice(self.mole_buttons)
-        mole.setText("mole")
+        mole.setIcon(QIcon(self.mole_pixmap))  # Set mole image
+        mole.setIconSize(mole.size())  # Resize the icon to fit the button
         mole.setEnabled(True)
-
+        
     def hit_mole(self):
         sender = self.sender()
-        if sender.isEnabled() and sender.text() == "mole":
+        if sender.isEnabled() and not sender.icon().isNull():  # Check if there's an icon (mole)
             self.score += 1
             self.score_label.setText(f"Score: {self.score}")
-            sender.setText("")
+            sender.setIcon(QIcon())  # Remove the icon
             sender.setEnabled(False)
             self.show_random_mole()  # Move mole to a new square
 
@@ -150,7 +158,7 @@ def main():
                 rows = int(rows_text)
                 cols = int(cols_text)
 
-                if 15 <= duration <= 60 and 3 <= rows <= 5 and 3 <= cols <= 5: # Grid has to be between 3x3 and 5x5
+                if MIN_TIME <= duration <= MAX_TIME and MIN_ROWS <= rows <= MAX_ROWS and MIN_COLS <= cols <= MAX_COLS: # Grid has to be between 3x3 and 5x5
                     game = WhackAMoleGame(duration, rows, cols)
                     game.show()
                     app.exec_()  # Run the game loop
@@ -161,7 +169,7 @@ def main():
                     if replay == QMessageBox.No:
                         break  # Exit the loop and close the application
                 else:
-                    QMessageBox.warning(None, "Invalid Input", "Please enter valid values for duration (15-60), rows (1-10), and columns (1-10).")
+                    QMessageBox.warning(None, "Invalid Input", f"Please enter valid values for duration ({MIN_TIME}-{MAX_TIME}), rows ({MIN_ROWS}-{MAX_ROWS}), and columns ({MIN_COLS}-{MAX_COLS}).")
             except ValueError:
                 QMessageBox.warning(None, "Invalid Input", "Please enter valid integer values.")
         else:
